@@ -1,4 +1,4 @@
-# Xavier Women's Volleyball Analytics
+# Xavier Women's Volleyball Analytics (IN PROGRESS)
 
 A Python and Streamlit application for recording and analyzing Xavier Women's Volleyball practice and match statistics.
 
