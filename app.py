@@ -51,11 +51,37 @@ st.session_state.practice_date = st.date_input(
     "Date"
 )
 
+
 if st.session_state.mode == "Practice":
 
-    st.session_state.drill = st.text_input(
-        "Current Drill"
+    drill_options = [
+        "6v6",
+        "Whistle 6v6",
+        "5v5",
+        "3 Ball Wash",
+        "Tip Transition",
+        "OOS v 6",
+        "3 Ball Transition v 6",
+        "Hitting Lines",
+        "2 Min Hitting",
+        "Pass to Attack",
+        "Baseball",
+        "Other / New Drill"
+    ]
+
+    selected_drill = st.selectbox(
+        "Current Drill",
+        drill_options,
+        key="practice_drill_selection"
     )
+
+    if selected_drill == "Other / New Drill":
+        st.session_state.drill = st.text_input(
+            "Enter New Drill Name",
+            key="custom_drill_name"
+        ).strip()
+    else:
+        st.session_state.drill = selected_drill
 
 else:
 

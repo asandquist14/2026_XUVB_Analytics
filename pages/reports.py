@@ -339,12 +339,39 @@ def reports_page():
 
     st.divider()
 
-    st.subheader("Attack Percentage")
+    st.subheader("Attack Statistics Breakdown")
 
-    st.dataframe(
-        stats,
-        use_container_width=True,
-        hide_index=True
+    attack_breakdown = st.selectbox(
+        "Separate attacking stats by:",
+        [
+            "Overall",
+            "By Drill",
+            "By Setter",
+            "By Drill and Setter"
+        ],
+        key="attack_stats_breakdown"
+    )
+
+    if attack_breakdown == "Overall":
+        attack_report = stats
+
+    elif attack_breakdown == "By Drill":
+        attack_report = get_attack_stats_by_drill(practice_date)
+
+    elif attack_breakdown == "By Setter":
+        attack_report = get_attack_stats_by_setter_total(practice_date)
+
+    else:
+        attack_report = get_attack_stats_by_drill_setter(practice_date)
+
+    if attack_report.empty:
+        st.info("No attacking stats recorded for this date.")
+
+    else:
+        st.dataframe(
+            attack_report,
+            use_container_width=True,
+            hide_index=True
         )
 
     st.divider()

@@ -702,3 +702,109 @@ def get_passing_trend(player=None):
     ).round(3)
 
     return df
+
+
+def get_attack_stats_by_drill(practice_date):
+    conn = get_connection()
+
+    df = pd.read_sql_query("""
+        SELECT
+            drill,
+            SUM(CASE WHEN result = 'K' THEN 1 ELSE 0 END) AS Kills,
+            SUM(CASE WHEN result = 'E' THEN 1 ELSE 0 END) AS Errors,
+            COUNT(*) AS TotalAttempts
+        FROM attacks
+        WHERE practice_date = ?
+        GROUP BY drill
+        ORDER BY drill
+    """, conn, params=(str(practice_date),))
+
+    conn.close()
+
+    if df.empty:
+        return df
+
+    df["Attack %"] = np.where(
+        df["TotalAttempts"] > 0,
+        (df["Kills"] - df["Errors"]) / df["TotalAttempts"],
+        0
+    ).round(3)
+
+    df["Kill %"] = np.where(
+        df["TotalAttempts"] > 0,
+        df["Kills"] / df["TotalAttempts"],
+        0
+    ).round(3)
+
+    return df
+
+
+def get_attack_stats_by_setter_total(practice_date):
+    conn = get_connection()
+
+    df = pd.read_sql_query("""
+        SELECT
+            setter,
+            SUM(CASE WHEN result = 'K' THEN 1 ELSE 0 END) AS Kills,
+            SUM(CASE WHEN result = 'E' THEN 1 ELSE 0 END) AS Errors,
+            COUNT(*) AS TotalAttempts
+        FROM attacks
+        WHERE practice_date = ?
+        GROUP BY setter
+        ORDER BY setter
+    """, conn, params=(str(practice_date),))
+
+    conn.close()
+
+    if df.empty:
+        return df
+
+    df["Attack %"] = np.where(
+        df["TotalAttempts"] > 0,
+        (df["Kills"] - df["Errors"]) / df["TotalAttempts"],
+        0
+    ).round(3)
+
+    df["Kill %"] = np.where(
+        df["TotalAttempts"] > 0,
+        df["Kills"] / df["TotalAttempts"],
+        0
+    ).round(3)
+
+    return df
+
+
+def get_attack_stats_by_drill_setter(practice_date):
+    conn = get_connection()
+
+    df = pd.read_sql_query("""
+        SELECT
+            drill,
+            setter,
+            SUM(CASE WHEN result = 'K' THEN 1 ELSE 0 END) AS Kills,
+            SUM(CASE WHEN result = 'E' THEN 1 ELSE 0 END) AS Errors,
+            COUNT(*) AS TotalAttempts
+        FROM attacks
+        WHERE practice_date = ?
+        GROUP BY drill, setter
+        ORDER BY drill, setter
+    """, conn, params=(str(practice_date),))
+
+    conn.close()
+
+    if df.empty:
+        return df
+
+    df["Attack %"] = np.where(
+        df["TotalAttempts"] > 0,
+        (df["Kills"] - df["Errors"]) / df["TotalAttempts"],
+        0
+    ).round(3)
+
+    df["Kill %"] = np.where(
+        df["TotalAttempts"] > 0,
+        df["Kills"] / df["TotalAttempts"],
+        0
+    ).round(3)
+
+    return df
