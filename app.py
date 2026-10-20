@@ -1,5 +1,12 @@
 import streamlit as st
 import pandas as pd
+
+st.set_page_config(
+    page_title="Xavier Volleyball Analytics",
+    page_icon="🏐",
+    layout="wide"
+)
+
 from utils.session import initialize_session
 initialize_session()
 from pages.attack import practice_attack_page, match_attack_page
@@ -9,11 +16,6 @@ from pages.recieve import serve_receive_page
 from pages.reports import reports_page
 from database.database import get_seasons, add_roster_player, update_roster_player, deactivate_roster_player, add_season, delete_season, get_connection
 
-st.set_page_config(
-    page_title="Xavier Volleyball Analytics",
-    page_icon="🏐",
-    layout="wide"
-)
 
 # ---------------- SEASON SELECTOR ---------------- #
 

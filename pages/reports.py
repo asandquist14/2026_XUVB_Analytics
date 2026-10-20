@@ -6,6 +6,35 @@ import plotly.express as px
 from database.queries import *
 from utils.roster import load_roster
 
+def normalize_stat(value, minimum, maximum):
+    """Convert a statistic to a score from 0 to 100."""
+    if value is None:
+        return None
+
+    score = (value - minimum) / (maximum - minimum) * 100
+    return max(0, min(100, score))
+
+
+def heatmap_color(score):
+    """Return a red-yellow-green gradient color."""
+    if score is None:
+        return "#D1D5DB"  # Gray for missing values
+
+    if score <= 50:
+        # Red to yellow
+        ratio = score / 50
+        red = 255
+        green = int(255 * ratio)
+        blue = 0
+    else:
+        # Yellow to green
+        ratio = (score - 50) / 50
+        red = int(255 * (1 - ratio))
+        green = 255
+        blue = 0
+
+    return f"#{red:02X}{green:02X}{blue:02X}"
+
 
 def reports_page():
 
@@ -76,7 +105,7 @@ def reports_page():
 
     # ---------- Serving ----------
 
-    serving = get_serving_stats(practice_date, season_id)
+    serving = get_serving_stats(practice_date, season_id, session_type=session)
 
     if serving.empty:
 
@@ -92,7 +121,7 @@ def reports_page():
 
     # ---------- Serve Receive ----------
 
-    passing = get_serve_receive_stats(practice_date, season_id)
+    passing = get_serve_receive_stats(practice_date, season_id, session_type=session)
 
     if passing.empty:
 
@@ -102,34 +131,103 @@ def reports_page():
 
         pass_avg = passing["Average"].mean()
 
-    with c1:
+    # ---------- KPI Dashboard ----------
 
+    with c1:
         st.metric(
-            "Attack %",
-            f"{attack_pct:.3f}"
+            label="🏐 Attack Percentage",
+            value=f"{attack_pct:.3f}",
+            help="(Kills - Errors) / Total Attempts"
         )
 
     with c2:
-
         st.metric(
-            "Kill %",
-            f"{kill_pct:.3f}"
+            label="💥 Kill Percentage",
+            value=f"{kill_pct:.1%}",
+            help="Kills / Total Attempts"
         )
 
     with c3:
-
         st.metric(
-            "Serve Avg",
-            f"{serve_avg:.2f}"
+            label="🚀 Serve Average",
+            value=f"{serve_avg:.2f}",
+            help="Average serving rating"
         )
 
     with c4:
-
         st.metric(
-            "Pass Avg",
-            f"{pass_avg:.2f}"
+            label="🎯 Pass Average",
+            value=f"{pass_avg:.2f}",
+            help="Average serve-receive rating"
         )
-        
+
+    
+    
+    # ---------- Setter-Attacker Connection Matrix ----------
+
+    st.divider()
+    st.subheader("🏐 Setter–Attacker Connections")
+
+    conn = get_connection()
+
+    connection_data = pd.read_sql_query(
+        """
+        SELECT setter, attacker, result
+        FROM attacks
+        WHERE practice_date = ?
+          AND season_id = ?
+          AND session_type = ?
+        """,
+        conn,
+        params=(practice_date, season_id, session)
+    )
+
+    conn.close()
+
+    if not connection_data.empty:
+        connection_summary = (
+            connection_data.groupby(["setter", "attacker"])
+            .agg(
+                Kills=("result", lambda x: (x == "K").sum()),
+                Errors=("result", lambda x: (x == "E").sum()),
+                Attempts=("result", "count")
+            )
+            .reset_index()
+        )
+
+        connection_summary["Attack %"] = (
+            (connection_summary["Kills"] - connection_summary["Errors"])
+            / connection_summary["Attempts"]
+        )
+
+        connection_matrix = connection_summary.pivot(
+            index="attacker",
+            columns="setter",
+            values="Attack %"
+        )
+
+        fig = px.imshow(
+            connection_matrix,
+            labels={
+                "x": "Setter",
+                "y": "Attacker",
+                "color": "Attack %"
+            },
+            color_continuous_scale="RdYlGn",
+            aspect="auto",
+            text_auto=".3f",
+            title="Attack Percentage by Setter and Attacker"
+        )
+
+        fig.update_layout(
+            coloraxis_colorbar_title="Attack %"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.info("No attack data available for this date and session.")
+
     st.divider()
 
     st.subheader("📋 Master Practice Report")
@@ -142,6 +240,133 @@ def reports_page():
         hide_index=True
     )
 
+    
+    # ---------- Player Performance Heatmap ----------
+
+    st.divider()
+    st.subheader("🔥 Team Player Performance Heatmap")
+
+    roster = load_roster(st.session_state.active_season_id)
+    active_players = sorted(roster["Player"].dropna().unique())
+
+    if active_players:
+        heatmap_rows = []
+
+        for player_name in active_players:
+            player_attack = get_player_attack_stats(
+                practice_date,
+                player_name,
+                season_id,
+                session_type=session
+            )
+
+            player_serving = get_player_serving_stats(
+                practice_date,
+                player_name,
+                season_id,
+                session_type=session
+            )
+
+            player_passing = get_player_receive_stats(
+                practice_date,
+                player_name,
+                season_id,
+                session_type=session
+            )
+
+            kills = (player_attack["result"] == "K").sum()
+            errors = (player_attack["result"] == "E").sum()
+            attempts = len(player_attack)
+
+            player_attack_pct = (
+                (kills - errors) / attempts if attempts > 0 else 0
+            )
+
+            player_serve_avg = (
+                player_serving["result"].mean()
+                if not player_serving.empty else 0
+            )
+
+            player_pass_avg = (
+                player_passing["rating"].mean()
+                if not player_passing.empty else 0
+            )
+
+            heatmap_rows.append({
+                "Player": player_name,
+                "Attack %": player_attack_pct,
+                "Serve Avg": player_serve_avg,
+                "Pass Avg": player_pass_avg
+            })
+
+        
+        # Keep the original statistics for displaying on the heat map
+        heatmap_df = pd.DataFrame(heatmap_rows).set_index("Player")
+
+        # Normalize each statistic separately to a 0-100 scale
+        normalized_df = heatmap_df.copy()
+
+        normalized_df["Attack %"] = normalized_df["Attack %"].apply(
+            lambda x: normalize_stat(x, -1, 1)
+        )
+
+        normalized_df["Serve Avg"] = normalized_df["Serve Avg"].apply(
+            lambda x: normalize_stat(x, 0, 4)
+        )
+
+        normalized_df["Pass Avg"] = normalized_df["Pass Avg"].apply(
+            lambda x: normalize_stat(x, 0, 3)
+        )
+
+        # Draw the heat map using normalized values
+        fig = px.imshow(
+            normalized_df,
+            labels=dict(
+                x="Statistic",
+                y="Player",
+                color="Performance Score"
+        ),
+            color_continuous_scale=[
+                [0.0, "red"],
+                [0.5, "yellow"],
+                [1.0, "green"]
+            ],
+            zmin=0,
+            zmax=100,
+            aspect="auto",
+            text_auto=False
+        )
+
+        # Display the original statistic values inside each cell
+        for row_index, player in enumerate(heatmap_df.index):
+            for col_index, stat in enumerate(heatmap_df.columns):
+                value = heatmap_df.iloc[row_index, col_index]
+
+                if pd.notna(value):
+                    fig.add_annotation(
+                        x=col_index,
+                        y=row_index,
+                        text=f"{value:.2f}",
+                        showarrow=False,
+                        font=dict(color="black", size=12)
+                    )
+
+        fig.update_layout(
+            title="Player Performance by Statistic",
+            height=max(350, len(active_players) * 35),
+            coloraxis_colorbar=dict(
+                title="Performance",
+                tickvals=[0, 25, 50, 75, 100],
+                ticktext=["Worst", "Low", "Average", "High", "Best"]
+            )
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.info("No active players found in this season's roster.")
+
+
     st.divider()
 
     st.subheader("👤 Player Dashboard")
@@ -153,6 +378,124 @@ def reports_page():
     )
 
     attack = get_player_attack_stats(practice_date, player, season_id, session_type=session)
+
+    
+    # ---------- Six-Zone Attack Court ----------
+    st.divider()
+    st.subheader("🏐 Attack Target Zones")
+
+    conn = get_connection()
+
+    zone_data = pd.read_sql_query(
+        """
+        SELECT target_zone, result
+        FROM attacks
+        WHERE season_id = ?
+        AND session_type = ?
+        AND target_zone IS NOT NULL
+        """,
+        conn,
+        params=(season_id, session)
+    )
+
+    conn.close()
+
+    if not zone_data.empty:
+        zone_summary = (
+            zone_data.groupby(["target_zone", "result"])
+            .size()
+            .unstack(fill_value=0)
+        )
+
+        # Make sure all outcome columns exist
+        for outcome in ["K", "E", "A"]:
+            if outcome not in zone_summary.columns:
+                zone_summary[outcome] = 0
+
+        # Draw six court zones
+        fig = go.Figure()
+
+        zone_positions = {
+            4: (0, 1),
+            3: (1, 1),
+            2: (2, 1),
+            5: (0, 0),
+            6: (1, 0),
+            1: (2, 0)
+        }
+
+        for zone, (x, y) in zone_positions.items():
+            kills = int(zone_summary.loc[zone, "K"]) if zone in zone_summary.index else 0
+            errors = int(zone_summary.loc[zone, "E"]) if zone in zone_summary.index else 0
+            attempts = int(zone_summary.loc[zone, "A"]) if zone in zone_summary.index else 0
+            total = kills + errors + attempts
+
+            
+            # Calculate attack success for this zone
+            success_rate = (kills / total) if total > 0 else 0
+
+            # Color zones based on kill percentage
+            if total == 0:
+                zone_color = "#E5E7EB"  # Gray: no attacks
+            elif success_rate >= 0.50:
+                zone_color = "#86EFAC"  # Green: high kill rate
+            elif success_rate >= 0.30:
+                zone_color = "#FDE68A"  # Yellow: medium kill rate
+            else:
+                zone_color = "#FCA5A5"  # Red: low kill rate
+
+            fig.add_shape(
+                type="rect",
+                x0=x, y0=y, x1=x + 1, y1=y + 1,
+                line=dict(color="white", width=3),
+                fillcolor=zone_color
+            )
+
+            fig.add_annotation(
+                x=x + 0.5,
+                y=y + 0.5,
+                text=(
+                    f"<b>Zone {zone}</b><br>"
+                    f"Attacks: {total}<br>"
+                    f"Kill rate: {success_rate:.1%}<br>"
+                    f"🟢 Kills: {kills}<br>"
+                    f"🔴 Errors: {errors}<br>"
+                    f"🟡 In play: {attempts}"
+                ),
+                showarrow=False,
+                font=dict(size=13, color="#111827")
+            )
+
+        fig.update_layout(
+            title="Attack Results by Target Zone",
+            xaxis=dict(range=[0, 3], visible=False, fixedrange=True),
+            yaxis=dict(range=[0, 2], visible=False, fixedrange=True),
+            height=450,
+            showlegend=False,
+            margin=dict(l=20, r=20, t=60, b=20),
+            plot_bgcolor="white",
+            paper_bgcolor="white"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown(
+            "**Zone Colors:** "
+            "🟢 Green = 50%+ kill rate | "
+            "🟡 Yellow = 30–49% | "
+            "🔴 Red = below 30% | "
+            "⬜ Gray = no attacks"
+        )
+
+        st.caption(
+            "Zones follow standard volleyball numbering. "
+            "Only attacks with a recorded target zone are included."
+        )
+    else:
+        st.info(
+            "No attacks with target zones recorded for this date and session yet. "
+            "Select a zone when entering attacks to populate this court."
+        )
     serving_player = get_player_serving_stats(practice_date, player, season_id, session_type=session)
     passing_player = get_player_receive_stats(practice_date, player, season_id, session_type=session)
 

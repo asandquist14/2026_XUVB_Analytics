@@ -63,6 +63,15 @@ def initialize_database():
             ADD COLUMN session_type TEXT DEFAULT 'Practice'
         """)
 
+    # Add target_zone to existing attacks tables if needed
+    cursor.execute("PRAGMA table_info(attacks)")
+    attack_columns = [column[1] for column in cursor.fetchall()]
+
+    if "target_zone" not in attack_columns:
+        cursor.execute(
+            "ALTER TABLE attacks ADD COLUMN target_zone INTEGER"
+        )
+
     # ---------------- SEASONS ---------------- #
 
     cursor.execute("""
@@ -260,7 +269,7 @@ if __name__ == "__main__":
 
 
 def add_attack(practice_date, drill, setter, attacker, attack_side,
-               result, rotation, season_id, session_type="Practice"):
+               result, rotation, season_id, session_type="Practice", target_zone=None):
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -268,8 +277,8 @@ def add_attack(practice_date, drill, setter, attacker, attack_side,
     cursor.execute("""
         INSERT INTO attacks
         (practice_date, drill, setter, attacker, attack_side,
-         result, rotation, season_id, session_type)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         result, rotation, season_id, session_type, target_zone)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         str(practice_date),
         drill,
@@ -279,7 +288,8 @@ def add_attack(practice_date, drill, setter, attacker, attack_side,
         result,
         rotation,
         season_id,
-        session_type
+        session_type,
+        target_zone
     ))
 
     conn.commit()

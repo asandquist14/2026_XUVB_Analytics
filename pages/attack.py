@@ -14,6 +14,9 @@ from config import ATTACK_RESULTS
 
 mode = st.session_state.mode
 
+if "selected_target_zone" not in st.session_state:
+    st.session_state.selected_target_zone = None
+
 def get_setter(court):
 
     if st.session_state.mode == "Match":
@@ -24,7 +27,46 @@ def get_setter(court):
 
     return st.session_state.right_setter
 
+
+
+
+def target_zone_selector():
+    st.markdown("**Where did the attack land?**")
+
+    if "selected_target_zone" not in st.session_state:
+        st.session_state.selected_target_zone = None
+
+    # Front row: zones 4, 3, 2
+    front = st.columns(3, gap="small")
+    for col, zone in zip(front, [4, 3, 2]):
+        with col:
+            if st.button(
+                f"Zone {zone}",
+                key=f"target_zone_{zone}",
+                use_container_width=True
+            ):
+                st.session_state.selected_target_zone = zone
+
+    # Back row: zones 5, 6, 1
+    back = st.columns(3, gap="small")
+    for col, zone in zip(back, [5, 6, 1]):
+        with col:
+            if st.button(
+                f"Zone {zone}",
+                key=f"target_zone_{zone}",
+                use_container_width=True
+            ):
+                st.session_state.selected_target_zone = zone
+
+    zone = st.session_state.selected_target_zone
+
+    if zone is not None:
+        st.info(f"Selected target zone: {zone}")
+    else:
+        st.caption("Select a zone before recording the attack.")
+
 def attack_buttons(player, side, court,  practice_date, drill):
+    target_zone = st.session_state.selected_target_zone
 
     c1, c2, c3 = st.columns([1,1,1], gap="small")
 
@@ -38,8 +80,11 @@ def attack_buttons(player, side, court,  practice_date, drill):
             "K",
             st.session_state.rotation,
             st.session_state.active_season_id,
-            session_type=st.session_state.mode
+            session_type=st.session_state.mode,
+            target_zone=target_zone
         )
+        st.session_state.selected_target_zone = None
+        st.rerun()
 
     if c2.button("🔴 Error", key=f"{court}_{player['Player']}_{side}_E"):
         add_attack(
@@ -51,8 +96,11 @@ def attack_buttons(player, side, court,  practice_date, drill):
             "E",
             st.session_state.rotation,
             st.session_state.active_season_id,
-            session_type=st.session_state.mode
+            session_type=st.session_state.mode,
+            target_zone=target_zone
         )
+        st.session_state.selected_target_zone = None
+        st.rerun()
 
     if c3.button("🟡 Attempt", key=f"{court}_{player['Player']}_{side}_A"):
         add_attack(
@@ -64,8 +112,11 @@ def attack_buttons(player, side, court,  practice_date, drill):
             "A",
             st.session_state.rotation,
             st.session_state.active_season_id,
-            session_type=st.session_state.mode
+            session_type=st.session_state.mode,
+            target_zone=target_zone
         )
+        st.session_state.selected_target_zone = None
+        st.rerun()
 
 def practice_attack_page():
 
@@ -75,6 +126,10 @@ def practice_attack_page():
     
 
     st.header("🏐 Attack Entry")
+
+    target_zone_selector()
+
+    st.divider()
 
     roster = attackers(st.session_state.active_season_id)
 
@@ -272,6 +327,10 @@ def match_attack_page():
     # ============================================
 
     st.header("🏐 Attack Entry")
+
+    target_zone_selector()
+
+    st.divider()
 
     roster = attackers(st.session_state.active_season_id)
 
