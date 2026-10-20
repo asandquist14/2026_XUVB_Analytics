@@ -36,7 +36,9 @@ def attack_buttons(player, side, court,  practice_date, drill):
             player["Player"],
             side,
             "K",
-            st.session_state.rotation
+            st.session_state.rotation,
+            st.session_state.active_season_id,
+            session_type=st.session_state.mode
         )
 
     if c2.button("🔴 Error", key=f"{court}_{player['Player']}_{side}_E"):
@@ -47,7 +49,9 @@ def attack_buttons(player, side, court,  practice_date, drill):
             player["Player"],
             side,
             "E",
-            st.session_state.rotation
+            st.session_state.rotation,
+            st.session_state.active_season_id,
+            session_type=st.session_state.mode
         )
 
     if c3.button("🟡 Attempt", key=f"{court}_{player['Player']}_{side}_A"):
@@ -58,7 +62,9 @@ def attack_buttons(player, side, court,  practice_date, drill):
             player["Player"],
             side,
             "A",
-            st.session_state.rotation
+            st.session_state.rotation,
+            st.session_state.active_season_id,
+            session_type=st.session_state.mode
         )
 
 def practice_attack_page():
@@ -70,7 +76,7 @@ def practice_attack_page():
 
     st.header("🏐 Attack Entry")
 
-    roster = attackers()
+    roster = attackers(st.session_state.active_season_id)
 
     left_court, right_court = st.columns(2)
 
@@ -164,16 +170,16 @@ def practice_attack_page():
                 st.divider()
 
     if st.button("↩️ Undo Last Entry"):
-        delete_last_attack()
+        delete_last_attack(st.session_state.active_season_id, session_type="Practice")
         st.rerun()
 
     if st.button("🗑️ Clear Current Practice"):
-        clear_attack_practice(practice_date)
+        clear_attack_practice(practice_date, st.session_state.active_season_id, session_type="Practice")
         st.rerun()
 
     st.header("Live Practice Stats")
 
-    roster = attackers()
+    roster = attackers(st.session_state.active_season_id)
     st.write("Number of attackers:", len(roster))
 
     view = st.selectbox(
@@ -188,23 +194,27 @@ def practice_attack_page():
     ]
 )
 
+    
+    session_type = "Practice"
+    season_id = st.session_state.active_season_id
+
     if view == "Overall":
-        stats = get_attack_stats(practice_date)
+        stats = get_attack_stats(practice_date, season_id, session_type)
 
     elif view == "By Rotation":
-        stats = get_attack_stats_by_rotation(practice_date)
+        stats = get_attack_stats_by_rotation(practice_date, season_id, session_type)
 
     elif view == "By Player & Rotation":
-        stats = get_attack_stats_player_rotation(practice_date)
+        stats = get_attack_stats_player_rotation(practice_date, season_id, session_type)
 
     elif view == "By Attack Side":
-        stats = get_attack_stats_by_side(practice_date)
+        stats = get_attack_stats_by_side(practice_date, season_id, session_type)
 
     elif view == "By Setter":
-        stats = get_attack_stats_by_setter(practice_date)
+        stats = get_attack_stats_by_setter(practice_date, season_id, session_type)
 
     else:
-        stats = get_attack_stats_by_setter_side(practice_date)
+        stats = get_attack_stats_by_setter_side(practice_date, season_id, session_type)
 
     st.dataframe(
         stats,
@@ -216,42 +226,6 @@ def match_attack_page():
 
     practice_date = st.session_state.practice_date
     drill = st.session_state.drill
-
-    # ============================================
-    # Match Information
-    # ============================================
-
-    st.header("🏆 Match Information")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-
-        st.text_input(
-            "Opponent",
-            key="opponent"
-        )
-
-        st.selectbox(
-            "Location",
-            ["Home", "Away", "Neutral"],
-            key="location"
-        )
-
-    with col2:
-
-        st.date_input(
-            "Match Date",
-            key="match_date"
-        )
-
-        st.selectbox(
-            "Set",
-            [1,2,3,4,5],
-            key="set_number"
-        )
-
-    st.divider()
 
     # ============================================
     # Live Score
@@ -286,7 +260,7 @@ def match_attack_page():
 
     st.radio(
         "Rotation",
-        ["R1","R2","R3","R4","R5","R6"],
+        ["No Rotation", "R1","R2","R3","R4","R5","R6"],
         horizontal=True,
         key="rotation"
     )
@@ -299,7 +273,7 @@ def match_attack_page():
 
     st.header("🏐 Attack Entry")
 
-    roster = attackers()
+    roster = attackers(st.session_state.active_season_id)
 
     for _, player in roster.iterrows():
 
@@ -359,30 +333,33 @@ def match_attack_page():
     ]
 )
 
+    session_type = "Match"
+    season_id = st.session_state.active_season_id
+
     if view == "Overall":
-        stats = get_attack_stats(practice_date)
+        stats = get_attack_stats(practice_date, season_id, session_type)
 
     elif view == "By Rotation":
-        stats = get_attack_stats_by_rotation(practice_date)
+        stats = get_attack_stats_by_rotation(practice_date, season_id, session_type)
 
     elif view == "By Player & Rotation":
-        stats = get_attack_stats_player_rotation(practice_date)
+        stats = get_attack_stats_player_rotation(practice_date, season_id, session_type)
 
     elif view == "By Attack Side":
-        stats = get_attack_stats_by_side(practice_date)
+        stats = get_attack_stats_by_side(practice_date, season_id, session_type)
 
     elif view == "By Setter":
-        stats = get_attack_stats_by_setter(practice_date)
+        stats = get_attack_stats_by_setter(practice_date, season_id, session_type)
 
     else:
-        stats = get_attack_stats_by_setter_side(practice_date)
+        stats = get_attack_stats_by_setter_side(practice_date, season_id, session_type)
 
     if st.button("↩️ Undo Last Entry"):
-        delete_last_attack()
+        delete_last_attack(st.session_state.active_season_id, session_type="Match")
         st.rerun()
 
     if st.button("🗑️ Clear Current Practice"):
-        clear_attack_practice(practice_date)
+        clear_attack_practice(practice_date, st.session_state.active_season_id, session_type="Match")
         st.rerun()
 
     if st.button("💾 Save Match"):
@@ -404,7 +381,7 @@ def match_attack_page():
             st.session_state.serving_team
         )
 
-    st.success("Match saved!")
+        st.success("Match saved!")
 
     st.dataframe(
         stats,

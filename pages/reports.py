@@ -11,6 +11,8 @@ def reports_page():
 
     st.title("📊 Reports Dashboard")
 
+    season_id = st.session_state.active_season_id
+
     st.divider()
 
     st.subheader("Filters")
@@ -47,7 +49,7 @@ def reports_page():
 
     c1, c2, c3, c4 = st.columns(4)
 
-    stats = get_attack_stats(practice_date)
+    stats = get_attack_stats(practice_date, season_id, session_type=session)
 
     if stats.empty:
 
@@ -74,7 +76,7 @@ def reports_page():
 
     # ---------- Serving ----------
 
-    serving = get_serving_stats(practice_date)
+    serving = get_serving_stats(practice_date, season_id)
 
     if serving.empty:
 
@@ -90,7 +92,7 @@ def reports_page():
 
     # ---------- Serve Receive ----------
 
-    passing = get_serve_receive_stats(practice_date)
+    passing = get_serve_receive_stats(practice_date, season_id)
 
     if passing.empty:
 
@@ -132,7 +134,7 @@ def reports_page():
 
     st.subheader("📋 Master Practice Report")
 
-    master = get_master_report(practice_date)
+    master = get_master_report(practice_date, season_id, session_type=session)
 
     st.dataframe(
         master,
@@ -146,13 +148,13 @@ def reports_page():
 
     player = st.selectbox(
         "Select Player",
-        sorted(load_roster()["Player"]),
+        sorted(load_roster(st.session_state.active_season_id)["Player"]),
         key="player_dashboard"
     )
 
-    attack = get_player_attack_stats(practice_date, player)
-    serving_player = get_player_serving_stats(practice_date, player)
-    passing_player = get_player_receive_stats(practice_date, player)
+    attack = get_player_attack_stats(practice_date, player, season_id, session_type=session)
+    serving_player = get_player_serving_stats(practice_date, player, season_id, session_type=session)
+    passing_player = get_player_receive_stats(practice_date, player, season_id, session_type=session)
 
     kills = len(attack[attack["result"] == "K"])
     errors = len(attack[attack["result"] == "E"])
@@ -337,6 +339,138 @@ def reports_page():
 
         st.plotly_chart(fig, use_container_width=True)
 
+    
+    # ---------- Player Comparison ----------
+
+    st.divider()
+    st.subheader("👥 Player Comparison")
+
+    comparison_session = st.radio(
+        "Compare data from:",
+        ["Practice", "Match"],
+        horizontal=True,
+        key="comparison_session"
+    )
+
+    roster = load_roster(st.session_state.active_season_id)
+
+    # Choose the position to compare
+    position = st.selectbox(
+        "Select Position",
+        sorted(roster["Position"].dropna().unique()),
+        key="comparison_position"
+    )
+
+    # Get players at the selected position
+    position_players = sorted(
+        roster.loc[
+            roster["Position"] == position,
+            "Player"
+        ].dropna().unique()
+    )
+
+    if len(position_players) == 0:
+        st.info("There are no active players at this position.")
+
+    elif len(position_players) == 1:
+        st.info("At least two active players at this position are needed to compare.")
+
+    else:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            player1 = st.selectbox(
+                "First Player",
+                position_players,
+                key="comparison_player1"
+            )
+
+        with col2:
+            # Avoid selecting the same player twice
+            player2_options = [
+                name for name in position_players
+                if name != player1
+            ]
+
+            player2 = st.selectbox(
+                "Second Player",
+                player2_options,
+                key="comparison_player2"
+            )
+
+        st.info(
+            f"Comparing {player1} and {player2} "
+            f"using {comparison_session.lower()} data."
+        )
+
+        season_id = st.session_state.active_season_id
+
+        # Get attacking statistics
+        attack1 = get_player_attack_stats(
+            practice_date, player1, season_id,
+            session_type=comparison_session
+        )
+
+        attack2 = get_player_attack_stats(
+            practice_date, player2, season_id,
+            session_type=comparison_session
+        )
+
+        # Get serving statistics
+        serve1 = get_player_serving_stats(
+            practice_date, player1, season_id,
+            session_type=comparison_session
+        )
+
+        serve2 = get_player_serving_stats(
+            practice_date, player2, season_id,
+            session_type=comparison_session
+        )
+
+        # Get serve-receive statistics
+        pass1 = get_player_receive_stats(
+            practice_date, player1, season_id,
+            session_type=comparison_session
+        )
+
+        pass2 = get_player_receive_stats(
+            practice_date, player2, season_id,
+            session_type=comparison_session
+        )
+
+        st.subheader("Attacking Comparison")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"**{player1}**")
+            st.dataframe(attack1, use_container_width=True)
+
+        with col2:
+            st.markdown(f"**{player2}**")
+            st.dataframe(attack2, use_container_width=True)
+
+        st.subheader("Serving Comparison")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"**{player1}**")
+            st.dataframe(serve1, use_container_width=True)
+
+        with col2:
+            st.markdown(f"**{player2}**")
+            st.dataframe(serve2, use_container_width=True)
+
+        st.subheader("Serve-Receive Comparison")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"**{player1}**")
+            st.dataframe(pass1, use_container_width=True)
+
+        with col2:
+            st.markdown(f"**{player2}**")
+            st.dataframe(pass2, use_container_width=True)
+
     st.divider()
 
     st.subheader("Attack Statistics Breakdown")
@@ -356,13 +490,13 @@ def reports_page():
         attack_report = stats
 
     elif attack_breakdown == "By Drill":
-        attack_report = get_attack_stats_by_drill(practice_date)
+        attack_report = get_attack_stats_by_drill(practice_date, season_id, session_type=session)
 
     elif attack_breakdown == "By Setter":
-        attack_report = get_attack_stats_by_setter_total(practice_date)
+        attack_report = get_attack_stats_by_setter_total(practice_date, season_id, session_type=session)
 
     else:
-        attack_report = get_attack_stats_by_drill_setter(practice_date)
+        attack_report = get_attack_stats_by_drill_setter(practice_date, season_id, session_type=session)
 
     if attack_report.empty:
         st.info("No attacking stats recorded for this date.")
@@ -413,11 +547,11 @@ def reports_page():
 
         player = st.selectbox(
             "Select Player",
-            sorted(load_roster()["Player"]),
+            sorted(load_roster(st.session_state.active_season_id)["Player"]),
             key="trend_player"
         )
 
-    attack_trend = get_attack_trend(player)
+    attack_trend = get_attack_trend(season_id, player, session_type=session)
 
 
     fig = px.line(
@@ -440,7 +574,7 @@ def reports_page():
 
     st.plotly_chart(fig, use_container_width=True)
 
-    serve_trend = get_serving_trend(player)
+    serve_trend = get_serving_trend(season_id, player, session_type=session)
 
     fig = px.line(
         serve_trend,
@@ -452,7 +586,7 @@ def reports_page():
 
     st.plotly_chart(fig, use_container_width=True)
 
-    pass_trend = get_passing_trend(player)
+    pass_trend = get_passing_trend(season_id, player, session_type=session)
 
     fig = px.line(
         pass_trend,

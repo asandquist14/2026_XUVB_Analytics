@@ -4,89 +4,71 @@ from database.database import get_connection
 from utils.roster import load_roster
 
 
-def get_attack_stats(practice_date):
+def get_attack_stats(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
     df = pd.read_sql_query("""
-
-    SELECT
-
-        attacker,
-
-        SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
-
-        SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
-
-        SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
-
-    FROM attacks
-    WHERE practice_date = ?
-    GROUP BY attacker
-
-    """, conn, params=(str(practice_date),))
+        SELECT
+            attacker,
+            SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
+            SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
+            SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
+        FROM attacks
+        WHERE practice_date = ?
+        AND season_id = ?
+        AND session_type = ?
+        GROUP BY attacker
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
     if df.empty:
         return df
 
-
     df["TotalAttempts"] = (
-        df["Kills"]
-        + df["Errors"]
-        + df["Attempt"]
+        df["Kills"] + df["Errors"] + df["Attempt"]
     )
 
     df["Attacking %"] = np.where(
-    df["TotalAttempts"] > 0,
-    ((df["Kills"] - df["Errors"]) / df["TotalAttempts"]).round(3),
-    0.000
-)
-    # Kill Percentage
+        df["TotalAttempts"] > 0,
+        ((df["Kills"] - df["Errors"]) / df["TotalAttempts"]).round(3),
+        0.000
+    )
+
     df["Kill %"] = np.where(
-    df["TotalAttempts"] > 0,
-    (df["Kills"] / df["TotalAttempts"]).round(3),
-    0.000
-)
+        df["TotalAttempts"] > 0,
+        (df["Kills"] / df["TotalAttempts"]).round(3),
+        0.000
+    )
 
     return df
 
-def get_attack_stats_by_side(practice_date):
+
+def get_attack_stats_by_side(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
     df = pd.read_sql_query("""
-
-    SELECT
-
-        attacker,
-        attack_side,
-
-        SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
-
-        SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
-
-        SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
-
-    FROM attacks
-
-    WHERE practice_date = ?
-
-    GROUP BY attacker, attack_side
-
-    """, conn, params=(str(practice_date),))
+        SELECT
+            attacker,
+            attack_side,
+            SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
+            SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
+            SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
+        FROM attacks
+        WHERE practice_date = ?
+        AND season_id = ?
+        AND session_type = ?
+        GROUP BY attacker, attack_side
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
     if df.empty:
         return df
 
-    df["TotalAttempts"] = (
-        df["Kills"]
-        + df["Errors"]
-        + df["Attempt"]
-    )
+    df["TotalAttempts"] = df["Kills"] + df["Errors"] + df["Attempt"]
 
     df["Attack %"] = np.where(
         df["TotalAttempts"] > 0,
@@ -102,41 +84,31 @@ def get_attack_stats_by_side(practice_date):
 
     return df
 
-def get_attack_stats_by_setter(practice_date):
+
+def get_attack_stats_by_setter(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
     df = pd.read_sql_query("""
-
-    SELECT
-
-        attacker,
-        setter,
-
-        SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
-
-        SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
-
-        SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
-
-    FROM attacks
-
-    WHERE practice_date = ?
-
-    GROUP BY attacker, setter
-
-    """, conn, params=(str(practice_date),))
+        SELECT
+            attacker,
+            setter,
+            SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
+            SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
+            SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
+        FROM attacks
+        WHERE practice_date = ?
+        AND season_id = ?
+        AND session_type = ?
+        GROUP BY attacker, setter
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
     if df.empty:
         return df
 
-    df["TotalAttempts"] = (
-        df["Kills"]
-        + df["Errors"]
-        + df["Attempt"]
-    )
+    df["TotalAttempts"] = df["Kills"] + df["Errors"] + df["Attempt"]
 
     df["Attack %"] = np.where(
         df["TotalAttempts"] > 0,
@@ -152,42 +124,32 @@ def get_attack_stats_by_setter(practice_date):
 
     return df
 
-def get_attack_stats_by_setter_side(practice_date):
+
+def get_attack_stats_by_setter_side(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
     df = pd.read_sql_query("""
-
-    SELECT
-
-        attacker,
-        setter,
-        attack_side,
-
-        SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
-
-        SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
-
-        SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
-
-    FROM attacks
-
-    WHERE practice_date = ?
-
-    GROUP BY attacker, setter, attack_side
-
-    """, conn, params=(str(practice_date),))
+        SELECT
+            attacker,
+            setter,
+            attack_side,
+            SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
+            SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
+            SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
+        FROM attacks
+        WHERE practice_date = ?
+        AND season_id = ?
+        AND session_type = ?
+        GROUP BY attacker, setter, attack_side
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
     if df.empty:
         return df
 
-    df["TotalAttempts"] = (
-        df["Kills"]
-        + df["Errors"]
-        + df["Attempt"]
-    )
+    df["TotalAttempts"] = df["Kills"] + df["Errors"] + df["Attempt"]
 
     df["Attack %"] = np.where(
         df["TotalAttempts"] > 0,
@@ -203,7 +165,7 @@ def get_attack_stats_by_setter_side(practice_date):
 
     return df
 
-def get_serving_stats(practice_date):
+def get_serving_stats(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
@@ -224,16 +186,18 @@ def get_serving_stats(practice_date):
     FROM serves
 
     WHERE practice_date = ?
+    AND season_id = ?
+    AND session_type = ?
 
     GROUP BY server
 
-    """, conn, params=(str(practice_date),))
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
     return df
 
-def get_serve_receive_stats(practice_date):
+def get_serve_receive_stats(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
@@ -258,10 +222,12 @@ def get_serve_receive_stats(practice_date):
     FROM serve_receive
 
     WHERE practice_date = ?
+    AND season_id = ?
+    AND session_type = ?
 
     GROUP BY passer
 
-    """, conn, params=(str(practice_date),))
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
@@ -274,65 +240,52 @@ def get_serve_receive_stats(practice_date):
 
     return df
 
-def get_attack_stats_by_rotation(practice_date):
+
+def get_attack_stats_by_rotation(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
     df = pd.read_sql_query("""
-
-    SELECT
-
-        rotation,
-
-        SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
-
-        SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
-
-        SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
-
-    FROM attacks
-
-    WHERE practice_date = ?
-
-    GROUP BY rotation
-
-    """, conn, params=(str(practice_date),))
+        SELECT
+            rotation,
+            SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
+            SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
+            SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
+        FROM attacks
+        WHERE practice_date = ?
+        AND season_id = ?
+        AND session_type = ?
+        GROUP BY rotation
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
     return df
 
-def get_attack_stats_player_rotation(practice_date):
+
+def get_attack_stats_player_rotation(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
     df = pd.read_sql_query("""
-
-    SELECT
-
-        attacker,
-
-        rotation,
-
-        SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
-
-        SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
-
-        SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
-
-    FROM attacks
-
-    WHERE practice_date = ?
-
-    GROUP BY attacker, rotation
-
-    """, conn, params=(str(practice_date),))
+        SELECT
+            attacker,
+            rotation,
+            SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
+            SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
+            SUM(CASE WHEN result='A' THEN 1 ELSE 0 END) AS Attempt
+        FROM attacks
+        WHERE practice_date = ?
+        AND season_id = ?
+        AND session_type = ?
+        GROUP BY attacker, rotation
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
     return df
 
-def get_serving_stats_by_rotation(practice_date):
+def get_serving_stats_by_rotation(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
@@ -353,16 +306,18 @@ def get_serving_stats_by_rotation(practice_date):
     FROM serves
 
     WHERE practice_date = ?
+    AND season_id = ?
+    AND session_type = ?
 
     GROUP BY rotation
 
-    """, conn, params=(str(practice_date),))
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
     return df
 
-def get_serving_stats_player_rotation(practice_date):
+def get_serving_stats_player_rotation(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
@@ -385,16 +340,18 @@ def get_serving_stats_player_rotation(practice_date):
     FROM serves
 
     WHERE practice_date = ?
+    AND season_id = ?
+    AND session_type = ?
 
     GROUP BY server, rotation
 
-    """, conn, params=(str(practice_date),))
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
     return df
 
-def get_serve_receive_stats_by_rotation(practice_date):
+def get_serve_receive_stats_by_rotation(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
@@ -415,16 +372,18 @@ def get_serve_receive_stats_by_rotation(practice_date):
     FROM serve_receive
 
     WHERE practice_date = ?
+    AND season_id = ?
+    AND session_type = ?
 
     GROUP BY rotation
 
-    """, conn, params=(str(practice_date),))
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
     return df
 
-def get_serve_receive_player_rotation(practice_date):
+def get_serve_receive_player_rotation(practice_date, season_id, session_type="Practice"):
 
     conn = get_connection()
 
@@ -447,35 +406,41 @@ def get_serve_receive_player_rotation(practice_date):
     FROM serve_receive
 
     WHERE practice_date = ?
+    AND season_id = ?
+    AND session_type = ?
 
     GROUP BY passer, rotation
 
-    """, conn, params=(str(practice_date),))
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
     return df
 
-def get_player_attack_stats(practice_date, player):
+
+def get_player_attack_stats(practice_date, player, season_id, session_type="Practice"):
 
     conn = get_connection()
 
     df = pd.read_sql_query("""
-
-    SELECT *
-
-    FROM attacks
-
-    WHERE practice_date = ?
-    AND attacker = ?
-
-    """, conn, params=(str(practice_date), player))
+        SELECT *
+        FROM attacks
+        WHERE practice_date = ?
+        AND attacker = ?
+        AND season_id = ?
+        AND session_type = ?
+    """, conn, params=(
+        str(practice_date),
+        player,
+        season_id,
+        session_type
+    ))
 
     conn.close()
 
     return df
 
-def get_player_serving_stats(practice_date, player):
+def get_player_serving_stats(practice_date, player, season_id, session_type="Practice"):
 
     conn = get_connection()
 
@@ -487,14 +452,16 @@ def get_player_serving_stats(practice_date, player):
 
     WHERE practice_date = ?
     AND server = ?
+    AND season_id = ?
+    AND session_type = ?
 
-    """, conn, params=(str(practice_date), player))
+    """, conn, params=(str(practice_date), player, season_id, session_type))
 
     conn.close()
 
     return df
 
-def get_player_receive_stats(practice_date, player):
+def get_player_receive_stats(practice_date, player, season_id, session_type="Practice"):
 
     conn = get_connection()
 
@@ -506,20 +473,22 @@ def get_player_receive_stats(practice_date, player):
 
     WHERE practice_date = ?
     AND passer = ?
+    AND season_id = ?
+    AND session_type = ?
 
-    """, conn, params=(str(practice_date), player))
+    """, conn, params=(str(practice_date), player, season_id, session_type))
 
     conn.close()
 
     return df
 
-def get_master_report(practice_date):
+def get_master_report(practice_date, season_id, session_type="Practice"):
 
-    roster = load_roster()
+    roster = load_roster(season_id)
 
-    attack = get_attack_stats(practice_date)
-    serving = get_serving_stats(practice_date)
-    passing = get_serve_receive_stats(practice_date)
+    attack = get_attack_stats(practice_date, season_id, session_type)
+    serving = get_serving_stats(practice_date, season_id, session_type)
+    passing = get_serve_receive_stats(practice_date, season_id, session_type)
 
     master = roster.copy()
 
@@ -546,165 +515,121 @@ def get_master_report(practice_date):
 
     return master.fillna(0)
 
-def get_attack_trend(player=None):
+
+def get_attack_trend(season_id, player=None, session_type="Practice"):
 
     conn = get_connection()
 
     query = """
-
         SELECT
-
             practice_date,
-
             SUM(CASE WHEN result='K' THEN 1 ELSE 0 END) AS Kills,
-
             SUM(CASE WHEN result='E' THEN 1 ELSE 0 END) AS Errors,
-
             COUNT(*) AS Attempts
-
         FROM attacks
-
+        WHERE season_id = ?
+          AND session_type = ?
     """
 
-    params = []
+    params = [season_id, session_type]
 
     if player is not None:
-
-        query += " WHERE attacker = ? "
-
+        query += " AND attacker = ? "
         params.append(player)
 
     query += """
-
         GROUP BY practice_date
-
         ORDER BY practice_date
-
     """
 
-    df = pd.read_sql_query(
-        query,
-        conn,
-        params=params
-    )
-
+    df = pd.read_sql_query(query, conn, params=params)
     conn.close()
 
     if df.empty:
-
         return df
 
     df["Attack %"] = (
-        (df["Kills"] - df["Errors"])
-        / df["Attempts"]
+        (df["Kills"] - df["Errors"]) / df["Attempts"]
     ).round(3)
 
     df["Kill %"] = (
-        df["Kills"]
-        / df["Attempts"]
+        df["Kills"] / df["Attempts"]
     ).round(3)
 
     return df
 
-def get_serving_trend(player=None):
+
+def get_serving_trend(season_id, player=None, session_type="Practice"):
 
     conn = get_connection()
 
     query = """
-
         SELECT
-
             practice_date,
-
-            ROUND(AVG(result),2) AS ServeAverage
-
+            ROUND(AVG(result), 2) AS ServeAverage
         FROM serves
-
+        WHERE season_id = ?
+          AND session_type = ?
     """
 
-    params = []
+    params = [season_id, session_type]
 
     if player is not None:
-
-        query += " WHERE server = ? "
-
+        query += " AND server = ? "
         params.append(player)
 
     query += """
-
         GROUP BY practice_date
-
         ORDER BY practice_date
-
     """
 
-    df = pd.read_sql_query(
-        query,
-        conn,
-        params=params
-    )
-
+    df = pd.read_sql_query(query, conn, params=params)
     conn.close()
 
     return df
 
-def get_passing_trend(player=None):
+
+def get_passing_trend(season_id, player=None, session_type="Practice"):
 
     conn = get_connection()
 
     query = """
-
         SELECT
-
             practice_date,
-
-            ROUND(AVG(rating),2) AS PassAverage,
-
+            ROUND(AVG(rating), 2) AS PassAverage,
             COUNT(*) AS Passes,
-
             SUM(CASE WHEN rating=3 THEN 1 ELSE 0 END) AS Perfect
-
         FROM serve_receive
-
+        WHERE season_id = ?
+          AND session_type = ?
     """
 
-    params = []
+    params = [season_id, session_type]
 
     if player is not None:
-
-        query += " WHERE passer = ? "
-
+        query += " AND passer = ? "
         params.append(player)
 
     query += """
-
         GROUP BY practice_date
-
         ORDER BY practice_date
-
     """
 
-    df = pd.read_sql_query(
-        query,
-        conn,
-        params=params
-    )
-
+    df = pd.read_sql_query(query, conn, params=params)
     conn.close()
 
     if df.empty:
-
         return df
 
     df["Perfect %"] = (
-        df["Perfect"]
-        / df["Passes"]
+        df["Perfect"] / df["Passes"]
     ).round(3)
 
     return df
 
 
-def get_attack_stats_by_drill(practice_date):
+
+def get_attack_stats_by_drill(practice_date, season_id, session_type="Practice"):
     conn = get_connection()
 
     df = pd.read_sql_query("""
@@ -715,9 +640,11 @@ def get_attack_stats_by_drill(practice_date):
             COUNT(*) AS TotalAttempts
         FROM attacks
         WHERE practice_date = ?
+        AND season_id = ?
+        AND session_type = ?
         GROUP BY drill
         ORDER BY drill
-    """, conn, params=(str(practice_date),))
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
@@ -739,7 +666,7 @@ def get_attack_stats_by_drill(practice_date):
     return df
 
 
-def get_attack_stats_by_setter_total(practice_date):
+def get_attack_stats_by_setter_total(practice_date, season_id, session_type="Practice"):
     conn = get_connection()
 
     df = pd.read_sql_query("""
@@ -750,9 +677,11 @@ def get_attack_stats_by_setter_total(practice_date):
             COUNT(*) AS TotalAttempts
         FROM attacks
         WHERE practice_date = ?
+        AND season_id = ?
+        AND session_type = ?
         GROUP BY setter
         ORDER BY setter
-    """, conn, params=(str(practice_date),))
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 
@@ -774,7 +703,7 @@ def get_attack_stats_by_setter_total(practice_date):
     return df
 
 
-def get_attack_stats_by_drill_setter(practice_date):
+def get_attack_stats_by_drill_setter(practice_date, season_id, session_type="Practice"):
     conn = get_connection()
 
     df = pd.read_sql_query("""
@@ -786,9 +715,11 @@ def get_attack_stats_by_drill_setter(practice_date):
             COUNT(*) AS TotalAttempts
         FROM attacks
         WHERE practice_date = ?
+        AND season_id = ?
+        AND session_type = ?
         GROUP BY drill, setter
         ORDER BY drill, setter
-    """, conn, params=(str(practice_date),))
+    """, conn, params=(str(practice_date), season_id, session_type))
 
     conn.close()
 

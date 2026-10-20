@@ -11,19 +11,19 @@ def serve_buttons(player, practice_date, drill):
     c1, c2, c3, c4, c5 = st.columns([1,1,1,1,1])
 
     if c1.button("🟢 4", key=f"{player}_4"):
-        add_serve(practice_date, drill, player, 4, st.session_state.rotation)
+        add_serve(practice_date, drill, player, 4, st.session_state.rotation, st.session_state.active_season_id, session_type=st.session_state.mode)
 
     if c2.button("🟩 3", key=f"{player}_3"):
-        add_serve(practice_date, drill, player, 3, st.session_state.rotation)
+        add_serve(practice_date, drill, player, 3, st.session_state.rotation, st.session_state.active_season_id, session_type=st.session_state.mode)
 
     if c3.button("🟨 2", key=f"{player}_2"):
-        add_serve(practice_date, drill, player, 2, st.session_state.rotation)
+        add_serve(practice_date, drill, player, 2, st.session_state.rotation, st.session_state.active_season_id, session_type=st.session_state.mode)
 
     if c4.button("🟧 1", key=f"{player}_1"):
-        add_serve(practice_date, drill, player, 1, st.session_state.rotation)
+        add_serve(practice_date, drill, player, 1, st.session_state.rotation, st.session_state.active_season_id, session_type=st.session_state.mode)
 
     if c5.button("🔴 0", key=f"{player}_0"):
-        add_serve(practice_date, drill, player, 0, st.session_state.rotation)
+        add_serve(practice_date, drill, player, 0, st.session_state.rotation, st.session_state.active_season_id, session_type=st.session_state.mode)
 
 def serving_page():
 
@@ -38,7 +38,7 @@ def serving_page():
 
     st.header("🏐 Serving")
 
-    roster = load_roster()
+    roster = load_roster(st.session_state.active_season_id)
 
     for _, player in roster.iterrows():
 
@@ -64,26 +64,29 @@ def serving_page():
         ]
     )
 
+    season_id = st.session_state.active_season_id
+    session_type = st.session_state.mode
+
     if view == "Overall":
-        stats = get_serving_stats(practice_date)
+        stats = get_serving_stats(practice_date, season_id, session_type)
 
     elif view == "By Rotation":
-        stats = get_serving_stats_by_rotation(practice_date)
+        stats = get_serving_stats_by_rotation(practice_date, season_id, session_type)
 
     else:
-        stats = get_serving_stats_player_rotation(practice_date)
+        stats = get_serving_stats_player_rotation(practice_date, season_id, session_type)
 
     if st.button("↩️ Undo Last Entry"):
-        delete_last_serve()
+        delete_last_serve(st.session_state.active_season_id)
         st.rerun()
 
     if st.button("🗑️ Clear Current Practice"):
-        clear_serve_practice(practice_date)
+        clear_serve_practice(practice_date, st.session_state.active_season_id)
         st.rerun()
 
     st.header("Live Serving Stats")
 
-    stats = get_serving_stats(practice_date)
+    stats = get_serving_stats(practice_date, season_id, session_type)
 
     st.dataframe(
         stats,

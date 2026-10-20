@@ -16,7 +16,9 @@ def pass_buttons(player, practice_date, drill):
             drill,
             player,
             3,
-            st.session_state.rotation
+            st.session_state.rotation,
+            st.session_state.active_season_id,
+            session_type=st.session_state.mode
         )
 
     if c2.button("🟡 2", key=f"{player}_2"):
@@ -25,7 +27,9 @@ def pass_buttons(player, practice_date, drill):
             drill,
             player,
             2,
-            st.session_state.rotation
+            st.session_state.rotation,
+            st.session_state.active_season_id,
+            session_type=st.session_state.mode
         )
 
     if c3.button("🟠 1", key=f"{player}_1"):
@@ -34,7 +38,9 @@ def pass_buttons(player, practice_date, drill):
             drill,
             player,
             1,
-            st.session_state.rotation
+            st.session_state.rotation,
+            st.session_state.active_season_id,
+            session_type=st.session_state.mode
         )
 
     if c4.button("🔴 0", key=f"{player}_0"):
@@ -43,7 +49,9 @@ def pass_buttons(player, practice_date, drill):
             drill,
             player,
             0,
-            st.session_state.rotation
+            st.session_state.rotation,
+            st.session_state.active_season_id,
+            session_type=st.session_state.mode
         )
 
 def serve_receive_page():
@@ -55,7 +63,7 @@ def serve_receive_page():
 
     st.header("🏐 Serve Receive")
 
-    roster = passers()
+    roster = passers(st.session_state.active_season_id)
 
     for _, player in roster.iterrows():
 
@@ -82,27 +90,30 @@ def serve_receive_page():
     ]
 )
 
+    season_id = st.session_state.active_season_id
+    session_type = st.session_state.mode
+
     if view == "Overall":
-        stats = get_serve_receive_stats(practice_date)
+        stats = get_serve_receive_stats(practice_date, season_id, session_type)
 
     elif view == "By Rotation":
-        stats = get_serve_receive_stats_by_rotation(practice_date)
+        stats = get_serve_receive_stats_by_rotation(practice_date, season_id, session_type)
 
     else:
-        stats = get_serve_receive_player_rotation(practice_date)
+        stats = get_serve_receive_player_rotation(practice_date, season_id, session_type)
 
     if st.button("↩️ Undo Last Entry"):
-        delete_last_recieve()
+        delete_last_recieve(st.session_state.active_season_id)
         st.rerun()
 
     if st.button("🗑️ Clear Current Practice"):
-        clear_serve_recieve_practice(practice_date)
+        clear_serve_recieve_practice(practice_date, st.session_state.active_season_id)
         st.rerun()
 
 
     st.header("Live Passing Stats")
 
-    stats = get_serve_receive_stats(practice_date)
+    stats = get_serve_receive_stats(practice_date, season_id, session_type)
 
     st.dataframe(
         stats,
