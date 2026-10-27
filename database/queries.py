@@ -482,6 +482,7 @@ def get_player_receive_stats(practice_date, player, season_id, session_type="Pra
 
     return df
 
+
 def get_master_report(practice_date, season_id, session_type="Practice"):
 
     roster = load_roster(season_id)
@@ -497,21 +498,21 @@ def get_master_report(practice_date, season_id, session_type="Practice"):
         how="left",
         left_on="Player",
         right_on="attacker"
-    )
+    ).drop(columns=["attacker"], errors="ignore")
 
     master = master.merge(
         serving,
         how="left",
         left_on="Player",
         right_on="server"
-    )
+    ).drop(columns=["server"], errors="ignore")
 
     master = master.merge(
         passing,
         how="left",
         left_on="Player",
         right_on="passer"
-    )
+    ).drop(columns=["passer"], errors="ignore")
 
     return master.fillna(0)
 
